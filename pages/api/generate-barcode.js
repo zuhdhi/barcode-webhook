@@ -1,5 +1,6 @@
 import bwipjs from 'bwip-js';
 import { createCanvas } from 'canvas';
+import '@canvas-fonts/arial'; 
 
 // Disable body parsing - we need JSON
 export const config = {
