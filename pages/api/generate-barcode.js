@@ -29,8 +29,9 @@ export default async function handler(req, res) {
       });
     }
 
-    const hashedSales = applyHashingFormat(salesPrice, hashingFormat);
-    const hashedPurchase = applyHashingFormat(purchasePrice, hashingFormat);
+    // Apply custom hashing to prices
+    const hashedSales = applyCustomHash(salesPrice);
+    const hashedPurchase = applyCustomHash(purchasePrice);
 
     const barcodeBuffer = await bwipjs.toBuffer({
       bcid: 'code128',
@@ -71,7 +72,6 @@ async function addCustomTextToBarcode(barcodeBuffer, hashedSales, hashedPurchase
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(barcodeImg, 0, 0);
   
-  // Arial is now registered and will work
   ctx.font = 'bold 14px Arial';
   ctx.fillStyle = 'black';
   ctx.textAlign = 'center';
@@ -85,25 +85,31 @@ async function addCustomTextToBarcode(barcodeBuffer, hashedSales, hashedPurchase
   return canvas.toBuffer('image/png');
 }
 
-function applyHashingFormat(price, format) {
+// Custom hashing function with letter substitution
+function applyCustomHash(price) {
   const priceStr = price.toString();
   
-  if (!format || format === 'base64') {
-    return Buffer.from(priceStr).toString('base64');
+  // Mapping: 1→O, 2→W, 3→H, 4→R, 5→F, 6→X, 7→S, 8→E, 9→N, 0→T, .→Z
+  const hashMap = {
+    '1': 'O',
+    '2': 'W',
+    '3': 'H',
+    '4': 'R',
+    '5': 'F',
+    '6': 'X',
+    '7': 'S',
+    '8': 'E',
+    '9': 'N',
+    '0': 'T',
+    '.': 'Z'
+  };
+  
+  let hashedValue = '';
+  
+  for (let i = 0; i < priceStr.length; i++) {
+    const char = priceStr[i];
+    hashedValue += hashMap[char] || char; // Use mapping or keep original char if not in map
   }
   
-  if (format === 'mask') {
-    const len = priceStr.length;
-    if (len <= 4) return '***';
-    return priceStr.substring(0, 2) + '***' + priceStr.substring(len - 2);
-  }
-  
-  if (format === 'replace') {
-    return priceStr
-      .replace(/0/g, '#')
-      .replace(/5/g, '@')
-      .replace(/9/g, '*');
-  }
-  
-  return Buffer.from(priceStr).toString('base64');
+  return hashedValue;
 }
